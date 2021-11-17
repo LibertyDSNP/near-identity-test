@@ -10,9 +10,19 @@ crate-type = ["cdylib","rlib"]
 
 [dependencies]
 near-sdk = "3.1.0"
+hex = "0.4.2"
+slip10 = "0.4.3"
+bip39 = { version = "1.0.0", features = [ "rand" ] }
+bs58 = "0.3"
+ed25519-dalek = { version = "1" }
+wasm-bindgen = { version = "0.2", optional = true}
+rand = {version = "0.6.5", features =["wasm-bindgen"]}
 
 [dev-dependencies]
 near-sdk-sim = "3.1.0"
+
+[features]
+wasm = ["wasm-bindgen"]
 
 [profile.release]
 codegen-units = 1
