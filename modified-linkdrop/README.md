@@ -1,4 +1,4 @@
-#Modified LinkDrop contract (Allows creation of top level account)
+# Modified LinkDrop contract (Allows creation of top level accounts)
 
 LinkDrop contract allows any user to create a link that their friends can use to claim tokens even if they don't have an account yet.
 
