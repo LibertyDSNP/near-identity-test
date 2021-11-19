@@ -1,2 +1,4 @@
-/target
-/test-ledger
+/identity-experiments/target/
+/modified-linkdrop/target/
+.DS_Store
+.idea/
