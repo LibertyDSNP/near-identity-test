@@ -6,6 +6,8 @@ use near_sdk::{
     env, ext_contract, near_bindgen, AccountId, Balance, Promise, PromiseResult, PublicKey, Gas
 };
 
+const CODE: &[u8] = include_bytes!("../identity/counter.wasm");
+
 near_sdk::setup_alloc!();
 
 #[near_bindgen]
@@ -36,7 +38,10 @@ pub trait ExtLinkDrop {
     fn on_account_created(&mut self, predecessor_account_id: AccountId, amount: U128) -> bool;
 
     /// Callback after creating account and claiming linkdrop.
-    fn on_account_created_and_claimed(&mut self, amount: U128) -> bool;
+    fn on_account_created_and_claimed(&mut self, new_account_id: AccountId, new_public_key: PublicKey, amount: U128) -> bool;
+
+    /// Callback after execution `deploy`.
+    fn on_deployed(&mut self) -> bool;
 }
 
 fn is_promise_success() -> bool {
@@ -133,12 +138,37 @@ impl LinkDrop {
                 GAS,
             )
             .then(
-            ext_self::on_account_created_and_claimed(
-                amount.into(),
-                &env::current_account_id(),
-                NO_DEPOSIT,
-                ON_CALLBACK_GAS
-            ))
+                ext_self::on_account_created_and_claimed(
+                    new_account_id.into(),
+                    new_public_key.into(),
+                    amount.into(),
+                    &env::current_account_id(),
+                    NO_DEPOSIT,
+                    ON_CALLBACK_GAS
+                ))
+    }
+
+    /// Receipt: DLLBAnPN7k5hVL6bWj4Zeg8uTEncm7iqtsgALbP2jfsC
+    /// Failure [dropper2.testnet]: Error: Actor dropper2.testnet doesn't have permission to account deployed3.testnet to complete the action
+    /// Transaction Id CzLundxWBfnCzTPTRiMgzB3XJQd56cWNxcweZPAGmZfk
+    /// Deploy Contract on specified account
+    pub fn deploy(
+        &mut self,
+        account_id: AccountId
+    ) -> Promise {
+        assert!(
+            env::is_valid_account_id(account_id.as_bytes()),
+            "Invalid account id"
+        );
+
+        Promise::new(account_id)
+            .deploy_contract(CODE.to_vec())
+            .then(
+                ext_self::on_deployed(
+                    &env::current_account_id(),
+                    NO_DEPOSIT,
+                    ON_CALLBACK_GAS
+                ))
     }
 
     /// Create new account without linkdrop and deposit passed funds (used for creating sub accounts directly).
@@ -182,7 +212,7 @@ impl LinkDrop {
     }
 
     /// Callback after execution `create_account_and_claim`.
-    pub fn on_account_created_and_claimed(&mut self, amount: U128) -> bool {
+    pub fn on_account_created_and_claimed(&mut self, new_account_id: AccountId, new_public_key: PublicKey, amount: U128) -> bool {
         assert_eq!(
             env::predecessor_account_id(),
             env::current_account_id(),
@@ -190,11 +220,40 @@ impl LinkDrop {
         );
         let creation_succeeded = is_promise_success();
         if creation_succeeded {
-            Promise::new(env::current_account_id()).delete_key(env::signer_account_pk());
+            Promise::new(env::current_account_id())
+                .delete_key(env::signer_account_pk())
+                .add_access_key(new_public_key.clone(),
+                                ACCESS_KEY_ALLOWANCE,
+                                new_account_id.clone(),
+                                b"deploy".to_vec());
+
+            self.deploy_keys.insert(&new_public_key.into());
+            print!("Account created successfully")
         } else {
             // In case of failure, put the amount back.
             self.accounts
                 .insert(&env::signer_account_pk(), &amount.into());
+        }
+        creation_succeeded
+    }
+
+    /// Callback after execution `deploy`.
+    pub fn on_deployed(&mut self) -> bool {
+        assert_eq!(
+            env::predecessor_account_id(),
+            env::current_account_id(),
+            "Callback can only be called from the contract"
+        );
+        let creation_succeeded = is_promise_success();
+        if creation_succeeded {
+            if self.deploy_keys.contains(&env::signer_account_pk()) {
+                print!("Exists in deploy_keys -> lets remove it");
+                Promise::new(env::current_account_id()).delete_key(env::signer_account_pk());
+                self.deploy_keys.remove(&env::signer_account_pk());
+            }
+        } else {
+            // In case of failure, put the amount back.
+            print!("Error is deloying contract");
         }
         creation_succeeded
     }
