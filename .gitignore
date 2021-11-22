@@ -1,4 +1,5 @@
 /identity-experiments/target/
 /modified-linkdrop/target/
+/modified-linkdrop/res/
 .DS_Store
 .idea/

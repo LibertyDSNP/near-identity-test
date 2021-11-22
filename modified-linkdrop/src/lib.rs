@@ -1,25 +1,25 @@
-use borsh::{BorshDeserialize, BorshSerialize};
-use near_sdk::collections::Map;
+use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use near_sdk::collections::{LookupMap, UnorderedSet};
 use near_sdk::json_types::{Base58PublicKey, U128};
-use serde_json::json;
+use near_sdk::serde_json::json;
 use near_sdk::{
-    env, ext_contract, near_bindgen, AccountId, Balance, Promise, PromiseResult, PublicKey, Gas,
+    env, ext_contract, near_bindgen, AccountId, Balance, Promise, PromiseResult, PublicKey, Gas
 };
 
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+near_sdk::setup_alloc!();
 
 #[near_bindgen]
-#[derive(Default, BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize, BorshSerialize)]
 pub struct LinkDrop {
-    pub accounts: Map<PublicKey, Balance>,
+    pub accounts: LookupMap<PublicKey, Balance>,
+    pub deploy_keys: UnorderedSet<PublicKey>,
 }
 
 /// Access key allowance for linkdrop keys.
 const ACCESS_KEY_ALLOWANCE: u128 = 100_000_000_000_000_000_000_000;
 
-/// Gas attached to the callback from account creation.
-pub const ON_CREATE_ACCOUNT_CALLBACK_GAS: u64 = 20_000_000_000_000;
+/// Gas attached to the callback from account creation or contract deployment.
+pub const ON_CALLBACK_GAS: u64 = 20_000_000_000_000;
 
 /// Indicates there are no deposit for a callback for better readability.
 const NO_DEPOSIT: u128 = 0;
@@ -48,6 +48,15 @@ fn is_promise_success() -> bool {
     match env::promise_result(0) {
         PromiseResult::Successful(_) => true,
         _ => false,
+    }
+}
+impl Default for LinkDrop {
+    fn default() -> Self {
+        let this = Self {
+            accounts: LookupMap::new(b'a'.try_to_vec().unwrap()),
+            deploy_keys: UnorderedSet::new(b'c'.try_to_vec().unwrap()),
+        };
+        this
     }
 }
 
@@ -95,6 +104,7 @@ impl LinkDrop {
     }
 
     /// Create new account and and claim tokens to it.
+    /// We can not deploy contract from this method since we don't have access key of new created account
     pub fn create_account_and_claim(
         &mut self,
         new_account_id: AccountId,
@@ -121,12 +131,13 @@ impl LinkDrop {
                 json!({ "new_account_id": new_account_id, "new_public_key": new_public_key}).to_string().as_bytes().to_vec(),
                 amount,
                 GAS,
-            ).then(
+            )
+            .then(
             ext_self::on_account_created_and_claimed(
                 amount.into(),
                 &env::current_account_id(),
                 NO_DEPOSIT,
-                ON_CREATE_ACCOUNT_CALLBACK_GAS
+                ON_CALLBACK_GAS
             ))
     }
 
@@ -151,7 +162,7 @@ impl LinkDrop {
                 amount.into(),
                 &env::current_account_id(),
                 NO_DEPOSIT,
-                ON_CREATE_ACCOUNT_CALLBACK_GAS,
+                ON_CALLBACK_GAS,
             ))
     }
 
