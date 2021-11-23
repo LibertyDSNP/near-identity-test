@@ -1,6 +1,7 @@
-/identity-experiments/target/
-/modified-linkdrop/target/
-/modified-linkdrop/res/
-/registry/target/
-.DS_Store
+target/
+res/
+neardev/
 .idea/
+*.iml
+.DS_Store
+
