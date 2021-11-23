@@ -1,8 +1,10 @@
 # Sub-Account Factory
 
-This is directly adapted from **[Sputnikdao-factory2](https://github.com/near-daos/sputnik-dao-contract/tree/main/sputnikdao-factory2)**
+Creates sub-accounts using a counter (starting from 1001).
 
-# Deployment & Usage
+![Factory diagram](sub_account_factory.png?raw=true "Factory Diagram")
+
+This is directly adapted from **[Sputnikdao-factory2](https://github.com/near-daos/sputnik-dao-contract/tree/main/sputnikdao-factory2)**
 
 ## TestNet
 
