@@ -11,7 +11,7 @@ near_sdk::setup_alloc!();
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct Registry {
     // See more data types at https://doc.rust-lang.org/book/ch03-02-data-types.html
-    pub registrations: UnorderedMap<AccountId, u64>,
+    pub registrations: UnorderedMap<u64, AccountId>,
     dsnp_id_index: u64,
 }
 
@@ -36,19 +36,30 @@ impl Registry {
     // saves dsnp id to map of handle records
     pub fn register(&mut self, account_id: AccountId) -> u64 {
         self.dsnp_id_index+=1;
-        self.registrations.insert(&account_id, &self.dsnp_id_index);
+        self.registrations.insert(&self.dsnp_id_index, &account_id );
         env::log(format!("Registered {} to DSNP ID: {}", account_id, self.dsnp_id_index).as_bytes());
         return self.dsnp_id_index;
     }
 
-    pub fn get_dsnp_from_account(self, account_id: AccountId) -> Option<u64> {
-        return self.registrations.get(&account_id);
+    pub fn change_address(&mut self, dsnp_id: u64, new_account_id: AccountId) {
+        self.registrations.insert(&dsnp_id, &new_account_id) ;
+        env::log(format!("Registered {} to DSNP ID: {}", new_account_id, dsnp_id).as_bytes());
+    }
+
+    pub fn get_address(self, dsnp_id: u64) -> Option<AccountId> {
+        return self.registrations.get(&dsnp_id);
+    }
+
+    pub fn resolve_registration(self, account_id: AccountId) -> u64 {
+        let keys: Vec<u64> = self.registrations.iter().filter_map(|(key, val)| if val == account_id { Some(key)} else {None}).collect();
+        if keys.len() > 1 || keys.len() == 0 {
+            return 0;
+        } else {
+            return keys[0];
+        }
+
     }
 }
-
-// fn after_registration() {
-//     env::log("Created a new registration! Much excite!".as_bytes());
-// }
 
 
 #[cfg(test)]
@@ -88,9 +99,21 @@ mod tests {
         let context = get_context(vec![], false);
         testing_env!(context);
         // instantiate a contract variable with the counter at zero
-        let mut contract = Registry{ registrations: UnorderedMap::new(b"s".to_vec()), dsnp_id_index: 0};
+        let mut contract = Registry::new();
         contract.register("ashley.dsnp.testnet".to_string());
-        let received_id = contract.get_dsnp_from_account("ashley.dsnp.testnet".to_string());
-        assert_eq!(1, received_id.unwrap());
+        let received_id = contract.resolve_registration("ashley.dsnp.testnet".to_string());
+        assert_eq!(1, received_id);
+    }
+
+    #[test] 
+    fn change_address() {
+        // set up the mock context into the testing environment
+        let context = get_context(vec![], false);
+        testing_env!(context);
+        // instantiate a contract variable with the counter at zero
+        let mut contract = Registry::new();
+        let dsnp_id = contract.register("potato.dsnp.testnet".to_string());
+        contract.change_address(dsnp_id, "burrito.dsnp.testnet".to_string());
+        assert_eq!(dsnp_id, contract.resolve_registration("burrito.dsnp.testnet".to_string()));
     }
 }
