@@ -5,7 +5,9 @@ import PropTypes from 'prop-types';
 function App({ contract, currentUser, nearConfig, wallet }) {
   
   function createAccount() {
-    console.log("hello world");
+    console.log("calling contract");
+    const resp = await contract.view_method_name();
+    console.log(resp);
   }
 
   return (
