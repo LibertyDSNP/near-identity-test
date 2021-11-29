@@ -59,6 +59,19 @@ impl Registry {
         }
 
     }
+
+    /// Measure the storage an registry will take and need to provide
+    pub fn measure_account_storage_usage(&mut self) -> u64 {
+        let initial_storage_usage = env::storage_usage();
+        // Create a temporary, dummy entry and measure the storage used.
+        let tmp_account_id = "a".repeat(64);
+        let tmp_dsnp_id = 1;
+        self.registrations.insert(&tmp_dsnp_id, &tmp_account_id);
+        let usage = env::storage_usage() - initial_storage_usage;
+        // Remove the temporary entry.
+        self.registrations.remove(&tmp_dsnp_id);
+        return usage;
+    }
 }
 
 
