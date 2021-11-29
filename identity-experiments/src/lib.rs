@@ -74,13 +74,13 @@ impl ImplicitAccount {
     //before calling this you must generate a keypair from a 12 word phrase 
     // generate an account from a public key
     #[payable]
-    pub fn generate_implicit_account_from_key(&mut self, new_public_key: String) {
+    pub fn generate_implicit_account_from_key(&mut self, new_public_key: PublicKey) {
         println!("deposit {}, balance limit {}", env::attached_deposit() , INITIAL_BALANCE);
         // assert!(
         //     env::attached_deposit() < INITIAL_BALANCE,
         //     "Attached deposit must be greater than INITIAL_BALANCE of .5 NEAR"
         // );
-        println!("key received: {}", new_public_key);
+        println!("key received: {:?}", new_public_key);
         let key = new_public_key.clone();
         let implicit_id = hex::encode(new_public_key);
         Promise::new(implicit_id.clone()).create_account()
@@ -88,8 +88,8 @@ impl ImplicitAccount {
             .add_full_access_key(env::signer_account_pk())
             .transfer(INITIAL_BALANCE);
             //.deploy_contract(CODE.to_vec());
-        self.accounts.insert(&implicit_id, &key);
-        println!("created new account {:?} with key {:?}", &implicit_id, key);
+        self.accounts.insert(&implicit_id, &String::from_utf8(key).unwrap());
+        println!("created new account {:?}", &implicit_id);
     }
 
     //from https://github.com/near/near-cli-rs/blob/12dfa268b72ba4778aedf898361f46c5136fc75f/src/commands/add_command/implicit_account/generate_keypair/mod.rs

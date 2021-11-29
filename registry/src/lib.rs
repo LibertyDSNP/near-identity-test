@@ -1,9 +1,9 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::{env,near_bindgen, AccountId, PanicOnDefault};
+use near_sdk::{env,near_bindgen, AccountId, PanicOnDefault, Balance};
 use near_sdk::collections::UnorderedMap;
 
 near_sdk::setup_alloc!();
-
+const STORAGE_DEPOSIT: Balance = 2_630_000_000_000_000_000_000; // 1e24yN, 0.5N .00263
 
 // add the following attributes to prepare your code for serialization and invocation on the blockchain
 // More built-in Rust attributes here: https://doc.rust-lang.org/reference/attributes.html#built-in-attributes-index
@@ -34,7 +34,13 @@ impl Registry {
     // Register a new dsnpId
     // param account_id - account id to register (contains handle)
     // saves dsnp id to map of handle records
+    #[payable]
     pub fn register(&mut self, account_id: AccountId) -> u64 {
+        println!("deposit {}, balance limit {}", env::attached_deposit() , STORAGE_DEPOSIT);
+        assert!(
+            env::attached_deposit() < STORAGE_DEPOSIT,
+            "Attached deposit must be greater than INITIAL_BALANCE of .5 NEAR"
+        );
         self.dsnp_id_index+=1;
         self.registrations.insert(&self.dsnp_id_index, &account_id );
         env::log(format!("Registered {} to DSNP ID: {}", account_id, self.dsnp_id_index).as_bytes());
@@ -58,6 +64,19 @@ impl Registry {
             return keys[0];
         }
 
+    }
+
+    /// Measure the storage an registry will take and need to provide
+    pub fn measure_account_storage_usage(&mut self) -> u64 {
+        let initial_storage_usage = env::storage_usage();
+        // Create a temporary, dummy entry and measure the storage used.
+        let tmp_account_id = "a".repeat(64);
+        let tmp_dsnp_id = 1;
+        self.registrations.insert(&tmp_dsnp_id, &tmp_account_id);
+        let usage = env::storage_usage() - initial_storage_usage;
+        // Remove the temporary entry.
+        self.registrations.remove(&tmp_dsnp_id);
+        return usage;
     }
 }
 
