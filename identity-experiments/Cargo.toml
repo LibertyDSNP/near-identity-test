@@ -11,6 +11,10 @@ crate-type = ["cdylib","rlib"]
 [dependencies]
 near-sdk = "3.1.0"
 hex = "0.4.2"
+# slip10 = "0.4.3"
+# ed25519-dalek = { version = "1" }
+# bip39 = { version = "1.0.1"}
+# getrandom = { version = "0.2.3", features = ["js"]}
 
 [profile.release]
 codegen-units = 1
