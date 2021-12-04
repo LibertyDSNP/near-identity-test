@@ -1,0 +1,14 @@
+{
+  "name": "counter",
+  "description": "identity assembly",
+  "version": "0.0.1",
+  "scripts": {
+    "build": "node asconfig.js",
+    "asp": "asp --verbose"
+  },
+  "devDependencies": {
+    "env-cmd": "^10.1.0",
+    "near-sdk-as": "0.4.2",
+    "parcel-bundler": "~1.12.5"
+  }
+}
