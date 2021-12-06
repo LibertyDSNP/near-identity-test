@@ -3,7 +3,7 @@ use near_sdk::collections::UnorderedSet;
 use near_sdk::json_types::{
     // Base64VecU8,
     U128};
-use near_sdk::{assert_self, env, ext_contract, near_bindgen, AccountId, Gas, Promise, PublicKey};
+use near_sdk::{assert_self, env, ext_contract, near_bindgen, AccountId, Gas, Promise, PublicKey, Balance};
 
 const CODE: &[u8] = include_bytes!("../identity/rust_counter_tutorial.wasm");
 
@@ -12,6 +12,8 @@ const CODE: &[u8] = include_bytes!("../identity/rust_counter_tutorial.wasm");
 
 /// Gas allocated on the callback.
 const ON_CREATE_CALL_GAS: Gas = Gas(10_000_000_000_000);
+
+const FUNCTION_KEY_ALLOWANCE: Balance = 250_000_000_000_000_000_000_000;
 
 #[ext_contract(ext_self)]
 pub trait ExtSelf {
@@ -68,6 +70,8 @@ impl SubAccountFactory {
     pub fn create(
         &mut self,
         public_key: Option<PublicKey>,
+        function_key: Option<PublicKey>,
+        deploy: bool,
         // args: Base64VecU8,
     ) -> Promise {
         // todo: should use atomic counter
@@ -77,10 +81,15 @@ impl SubAccountFactory {
             .unwrap();
         let mut promise = Promise::new(account_id.clone())
             .create_account()
-            .deploy_contract(CODE.to_vec())
             .transfer(env::attached_deposit());
+        if deploy {
+            promise = promise.deploy_contract(CODE.to_vec())
+        }
         if let Some(key) = public_key {
             promise = promise.add_full_access_key(key.into())
+        }
+        if let Some(key) = function_key {
+            promise = promise.add_access_key(key.into(), FUNCTION_KEY_ALLOWANCE, env::current_account_id(),"".into());
         }
         promise
             // TODO: enable when identity has init function
